@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshare
+  labels:
+    app: snapshare
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: snapshare
+  template:
+    metadata:
+      labels:
+        app: snapshare
+    spec:
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: snapshare
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: snapshare
+        image: snapshare
+        ports:
+        - name: http
+          containerPort: 3000
+        env:
+        - name: UPSTASH_REDIS_REST_URL
+          valueFrom:
+            secretKeyRef:
+              name: snapshare-redis
+              key: UPSTASH_REDIS_REST_URL
+        - name: UPSTASH_REDIS_REST_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: snapshare-redis
+              key: UPSTASH_REDIS_REST_TOKEN
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 256Mi
+        # Readiness uses /api/health (pings Redis): no traffic while Redis is unreachable.
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          periodSeconds: 5
+          failureThreshold: 3
+        # Liveness only checks the Node process answers, so a Redis outage doesn't restart every pod.
+        livenessProbe:
+          tcpSocket:
+            port: http
+          periodSeconds: 10
+          failureThreshold: 3
+        startupProbe:
+          tcpSocket:
+            port: http
+          periodSeconds: 2
+          failureThreshold: 30
+        lifecycle:
+          preStop:
+            sleep:
+              seconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapshare
+  labels:
+    app: snapshare
+spec:
+  selector:
+    app: snapshare
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: snapshare
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: snapshare
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: snapshare
+spec:
+  rules:
+  - host: snapshare.178.105.120.178.sslip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: snapshare
+            port:
+              name: http
