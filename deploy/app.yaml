@@ -28,6 +28,8 @@ spec:
         labelSelector:
           matchLabels:
             app: snapshare
+      imagePullSecrets:
+      - name: ghcr-pull
       securityContext:
         runAsNonRoot: true
       containers:
