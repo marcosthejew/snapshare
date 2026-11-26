@@ -111,4 +111,4 @@ jobs:
           kubectl apply -k deploy
           kubectl -n "$NAMESPACE" rollout status deployment/snapshare --timeout=300s
       - name: Smoke test
-        run: curl -fsS --retry 10 --retry-delay 5 --retry-all-errors http://snapshare.178.105.120.178.sslip.io/api/health
+        run: curl -fsS --retry 10 --retry-delay 5 --retry-all-errors https://snapshare.178.105.120.178.sslip.io/api/health

@@ -114,6 +114,13 @@ kind: Ingress
 metadata:
   name: snapshare
 spec:
+  # Let's Encrypt certificate issued by hand (no cert-manager in the cluster) and stored as
+  # a Secret outside the pipeline, like ghcr-pull. snapshare needs HTTPS: browsers only
+  # expose crypto.subtle on secure pages.
+  tls:
+  - hosts:
+    - snapshare.178.105.120.178.sslip.io
+    secretName: snapshare-tls
   rules:
   - host: snapshare.178.105.120.178.sslip.io
     http:
