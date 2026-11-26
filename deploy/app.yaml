@@ -26,9 +26,22 @@ spec:
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: DoNotSchedule
         nodeTaintsPolicy: Honor
+        # Count only pods of the same revision, so a rollout never balances against old pods.
+        matchLabelKeys:
+        - pod-template-hash
         labelSelector:
           matchLabels:
             app: snapshare
+      # Replace pods 30 s after their node stops answering, instead of the default 300 s.
+      tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 30
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 30
       imagePullSecrets:
       - name: ghcr-pull
       securityContext:
