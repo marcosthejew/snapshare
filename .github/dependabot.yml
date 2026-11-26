@@ -5,6 +5,11 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 10
+    ignore:
+      # 2.1.0+ sends Lua scripts with the Upstash-only "allow-key-locking" flag, which
+      # the self-hosted Redis behind srh rejects, so every secret write fails with 503.
+      - dependency-name: "@upstash/ratelimit"
+        versions: [">=2.1.0"]
 
   # Keeps action version tags current — including the SHA-pinned Trivy
   # action (ci.yml), which Dependabot updates correctly alongside its
